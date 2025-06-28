@@ -33,14 +33,14 @@ const dareCommand = async (m, sock) => {
   const dare = relationshipDares[Math.floor(Math.random() * relationshipDares.length)];
 
   const formatted = `
-╔═════════════════════════
-║  *R E L A T I O N S H I P   D A R E* 💖 ║
-╠════════════════════════
+╔═════════════════════
+║  *R E L A T I O N S H I P   D A R E* 💖
+╠════════════════════
 ║                            
 ║ 💌 Dare:                   
 ║ ➥ ${dare}                 
 ║                            
-╚════════════════════════
+╚════════════════════
 ⏳ *Do it now or you're scared 😏*
 `.trim();
 
