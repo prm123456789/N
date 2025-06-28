@@ -6,39 +6,39 @@ const images = {
 
 const messages = {
   love: (name) => `
-┏━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ ❤️  *A Little Love*  ❤️ ┃
-┃                       ┃
-┃ Hey *${name}*,           ┃
-┃ Here's some warmth 💕   ┃
-┃ to brighten your day!   ┃
-┃                       ┃
-┃ Stay amazing! ✨         ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━┛
+┏━━━━━━━━━━━━━━━━━━━┓
+┃ ❤️  *A Little Love*  ❤️ 
+┃                       
+┃ Hey *${name}*,           
+┃ Here's some warmth 💕  
+┃ to brighten your day!   
+┃                       
+┃ Stay amazing! ✨         
+┗━━━━━━━━━━━━━━━━━━━┛
 `.trim(),
 
   goodmorning: (name) => `
-┏━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ ☀️  *Good Morning!*  ☀️ ┃
-┃                        ┃
-┃ Rise and shine, *${name}*!┃
-┃ May your day be filled   ┃
-┃ with joy and good vibes! ┃
-┃                        ┃
-┃ Have a wonderful day!    ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━┛
+┏━━━━━━━━━━━━━━━━━━━━┓
+┃ ☀️  *Good Morning!*  ☀️ 
+┃                        
+┃ Rise and shine, *${name}*!
+┃ May your day be filled   
+┃ with joy and good vibes! 
+┃                        
+┃ Have a wonderful day!    
+┗━━━━━━━━━━━━━━━━━━━━┛
 `.trim(),
 
   goodnight: (name) => `
-┏━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ 🌙  *Good Night*  🌙 ┃
-┃                       ┃
-┃ Sweet dreams, *${name}*! ┃
-┃ May your sleep be calm  ┃
-┃ and your rest peaceful. ┃
-┃                       ┃
-┃ See you tomorrow! ✨    ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━┛
+┏━━━━━━━━━━━━━━━━━━━┓
+┃ 🌙  *Good Night*  🌙 
+┃                       
+┃ Sweet dreams, *${name}*! 
+┃ May your sleep be calm  
+┃ and your rest peaceful. 
+┃                       
+┃ See you tomorrow! ✨    
+┗━━━━━━━━━━━━━━━━━━━┛
 `.trim(),
 };
 
