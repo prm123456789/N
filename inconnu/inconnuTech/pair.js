@@ -1,6 +1,28 @@
 import axios from 'axios';
 import config from '../../config.cjs';
 
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
+// Fonction pour vérifier l’API plusieurs fois
+async function getPairingCode(number, maxTries = 5) {
+  const url = `https://inconnu-boy-tech-web.onrender.com/pair?number=${encodeURIComponent(number)}`;
+  let tries = 0;
+
+  while (tries < maxTries) {
+    const res = await axios.get(url);
+    const { code, pairingCode } = res.data;
+
+    if (code || pairingCode) {
+      return code || pairingCode;
+    }
+
+    tries++;
+    await delay(3000); // attendre 3 secondes entre chaque essai
+  }
+
+  throw new Error("No pairing code received after several tries.");
+}
+
 const sessionGen = async (m, sock) => {
   const prefix = config.PREFIX;
   const cmd = m.body.startsWith(prefix)
@@ -11,15 +33,14 @@ const sessionGen = async (m, sock) => {
 
   if (cmd !== 'pair') return;
 
-  // Validate phone number format: optional +, 9 to 15 digits
   if (!text || !/^\+?\d{9,15}$/.test(text)) {
     return await sock.sendMessage(m.from, {
       text: `
 ❌ *Invalid Number Format!*
 
-Please use the correct format with country code.
+Use the format with country code.
 
-Example: \`.pair +554712345678\`
+✅ Example: \`.pair +554712345678\`
       `.trim(),
       contextInfo: {
         forwardingScore: 5,
@@ -33,10 +54,8 @@ Example: \`.pair +554712345678\`
   }
 
   try {
-    const response = await axios.get(`https://inconnu-boy-tech-web.onrender.com/pair?number=${encodeURIComponent(text)}`);
-    const { code } = response.data;
-
-    if (!code) throw new Error("No pairing code received from server.");
+    // Attente du code en plusieurs tentatives
+    const code = await getPairingCode(text);
 
     const successMsg = `
 ✅ *Pairing Code Generated!*
