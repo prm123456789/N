@@ -82,6 +82,7 @@ const menu = async (m, sock) => {
 │ ⬡ autorecording
 │ ⬡ autosticker
 │ ⬡ antisticker
+│ ⬡ antibugs
 │ ⬡ statusreply
 │ ⬡ restart
 │ ⬡ host
