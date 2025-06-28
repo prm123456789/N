@@ -1,56 +1,79 @@
-import { exec } from "child_process";
-import util from "util";
-import config from "../../config.cjs";
+import { exec } from 'child_process';
+import config from '../../config.cjs';
 
-const execPromise = util.promisify(exec);
+const updateCommand = async (m, sock) => {
+  const prefix = config.PREFIX || '.';
+  const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(' ')[0].toLowerCase() : '';
+  if (cmd !== 'update') return;
 
-// Déclaration des alias du nom de la commande
-const aliases = ["update", "up", "upgrade", "maj"];
+  const sender = m.sender;
+  const isOwner = sender === config.OWNER_NUMBER + '@s.whatsapp.net';
 
-const update = async (m, sock) => {
-  try {
-    const prefix = config.PREFIX;
-    const botName = config.BOT_NAME || "INCONNU XD V2";
-    const devName = config.OWNER_NAME || "INCONNU BOY TECH";
-
-    const body = m.body || "";
-    const cmd = body.startsWith(prefix)
-      ? body.slice(prefix.length).split(" ")[0].toLowerCase()
-      : "";
-
-    // Vérifie si la commande utilisée fait partie des alias
-    if (!aliases.includes(cmd)) return;
-
-    await m.reply("🔄 Checking for updates, please wait...");
-
-    const { stdout, stderr } = await execPromise("git pull");
-
-    if (stderr) {
-      return m.reply(`❌ *Update failed!*\n\nError:\n\`\`\`${stderr}\`\`\``);
-    }
-
-    let msg = `🌐 *${botName} Update Result*\n`;
-    msg += `╭───────────────⭓\n`;
-    msg += `│ 🤖 *BOT:* ${botName}\n`;
-    msg += `│ 👑 *DEV:* ${devName}\n`;
-    msg += `│ 🛠️ *Update Status:* Success\n`;
-    msg += `╰───────────────⭓\n`;
-    msg += `\n📄 *Git Response:*\n\`\`\`${stdout.trim()}\`\`\`\n`;
-    msg += `\n✅ *Done! Use \`${prefix}restart\` to reload the bot.*`;
-
-    await sock.sendMessage(m.from, {
-      image: { url: 'https://files.catbox.moe/e1k73u.jpg' },
-      caption: msg.trim(),
-      contextInfo: {
-        forwardingScore: 999,
-        isForwarded: true,
-      }
+  if (!isOwner) {
+    return await sock.sendMessage(m.from, {
+      text: '⛔ *Access Denied*\nOnly the bot owner can run this command.',
     }, { quoted: m });
+  }
 
-  } catch (error) {
-    console.error("Update Error:", error);
-    return m.reply(`❌ *Error while updating:*\n\`\`\`${error.message}\`\`\``);
+  // Message d’attente
+  await sock.sendMessage(m.from, { text: '🔄 Checking for updates, please wait...' }, { quoted: m });
+
+  try {
+    exec('git pull origin main', (error, stdout, stderr) => {
+      let updateStatus = '❌ Failed';
+      if (!error) updateStatus = '✅ Success';
+
+      const gitResponse = stdout || stderr || 'No response from git.';
+
+      const message = `
+🌐 *INCONNU XD V2 Update Result*
+╭───────────────⭓
+│ 🤖 *BOT:* INCONNU XD V2
+│ 👑 *DEV:* INCONNU BOY
+│ 🛠️ *Update Status:* ${updateStatus}
+╰───────────────⭓
+
+📄 *Git Response:*
+╰───────────────────────⭓
+\`\`\`
+${gitResponse.trim()}
+\`\`\`
+╰───────────────────────⭓
+
+✅ *Done! Use* \`.restart\` *to reload the bot.*
+
+━━━━━━━━━━━━━━━━━━━━━━━
+✨ Powered by INCONNU BOY
+🚀 Keep pushing boundaries!
+━━━━━━━━━━━━━━━━━━━━━━━
+      `.trim();
+
+      sock.sendMessage(m.from, {
+        text: message,
+        contextInfo: {
+          forwardingScore: 999,
+          isForwarded: true,
+          forwardedNewsletterMessageInfo: {
+            newsletterName: 'INCONNU-XD',
+            newsletterJid: '120363397722863547@newsletter',
+          },
+          externalAdReply: {
+            title: "INCONNU XD V2",
+            body: "Update System",
+            thumbnailUrl: "https://files.catbox.moe/e1k73u.jpg",
+            mediaType: 1,
+            renderLargerThumbnail: true,
+            sourceUrl: "https://github.com/tech107/l"
+          }
+        }
+      }, { quoted: m });
+    });
+  } catch (err) {
+    console.error('Update error:', err);
+    await sock.sendMessage(m.from, {
+      text: '❌ An error occurred while updating.',
+    }, { quoted: m });
   }
 };
 
-export default update;
+export default updateCommand;
