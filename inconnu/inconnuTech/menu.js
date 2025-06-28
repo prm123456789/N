@@ -81,7 +81,10 @@ const menu = async (m, sock) => {
 │ ⬡ autorecording
 │ ⬡ autosticker
 │ ⬡ antisticker
+│ ⬡ statusreply
 │ ⬡ restart
+│ ⬡ host
+│ ⬡ version
 │ ⬡ block
 │ ⬡ unblock
 │ ⬡ update
@@ -146,6 +149,8 @@ const menu = async (m, sock) => {
 ╰──────────────────⭓
 ⭓──────────────────⭓『 𝗜𝗡𝗖𝗢𝗡𝗡𝗨-𝗫𝗗-𝗙𝗨𝗡 』
 │ ⬡ getpp
+│ ⬡ insult
+│ ⬡ Dare
 │ ⬡ avatar
 │ ⬡ wcg
 │ ⬡ joke
