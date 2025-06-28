@@ -8,9 +8,19 @@ const weather = async (m, Matrix) => {
 
   if (cmd.toLowerCase() !== "weather") return;
 
+  const sender = m.pushName || 'User';
+
   if (!args.length) {
     return await Matrix.sendMessage(m.from, {
-      text: `❗ Usage: *${prefix}weather [city]*`,
+      text: `
+🌤️ *Weather Command Usage*
+╭───────────────╮
+│ 👤 *${sender}*, to get weather:
+│ ➤ *${prefix}weather [city]*
+│ 💡 Example:
+│ ➤ *${prefix}weather Paris*
+╰───────────────╯
+      `.trim(),
     }, { quoted: m });
   }
 
@@ -32,22 +42,22 @@ const weather = async (m, Matrix) => {
     const emoji = getWeatherEmoji(data.weather[0].main);
 
     const text = `
-╔══════════════════════════╗
-║  ${emoji} *Weather Report* ${emoji}   
-╠══════════════════════════╣
-║ 🌍 Location : *${name}*
-║ 🌥 Condition: *${desc}*
-║ 🌡 Temp     : *${temp}°C* (Feels like *${feels}°C*)
-║ 💧 Humidity : *${humidity}%*
-║ 💨 Wind     : *${wind} m/s*
-╚══════════════════════════╝
+╭─╼ *WEATHER REPORT* ─╮
+│ 📍 *Location:* ${name}
+│ 🌥️ *Condition:* ${desc}
+│ 🌡️ *Temperature:* ${temp}°C
+│ 🧊 *Feels Like:* ${feels}°C
+│ 💧 *Humidity:* ${humidity}%
+│ 💨 *Wind Speed:* ${wind} m/s
+╰───────────────────╯
+👤 *Requested by:* ${sender}
     `.trim();
 
     await Matrix.sendMessage(m.from, { text }, { quoted: m });
 
   } catch (err) {
     await Matrix.sendMessage(m.from, {
-      text: `❌ Could not find weather for *${city}*. Please check the city name.`,
+      text: `❌ *Error:* Could not find weather for *${city}*.\n💡 Make sure the city name is correct.`,
     }, { quoted: m });
   }
 };
