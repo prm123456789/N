@@ -1,52 +1,86 @@
-import axios from "axios";
+import axios from 'axios';
 import config from '../../config.cjs';
 
-const pairHandler = async (m, gss) => {
+const sessionGen = async (m, sock) => {
   const prefix = config.PREFIX;
-  const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(" ")[0].toLowerCase() : "";
-  const args = m.body.trim().split(/\s+/).slice(1);
-  const textnumber = args[0];
+  const cmd = m.body.startsWith(prefix)
+    ? m.body.slice(prefix.length).split(' ')[0].toLowerCase()
+    : '';
+  const text = m.body.slice(prefix.length + cmd.length).trim();
+  const senderName = m.pushName || 'User';
 
-  const validCommands = ["pair", "paircode", "code"];
-  if (!validCommands.includes(cmd)) return;
+  if (cmd !== 'pair') return;
 
-  if (!textnumber) {
-    return m.reply("Please provide a phone number.\nExample: *.pair 554488138425*");
+  // Validate phone number format: optional +, 9 to 15 digits
+  if (!text || !/^\+?\d{9,15}$/.test(text)) {
+    return await sock.sendMessage(m.from, {
+      text: `
+❌ *Invalid Number Format!*
+
+Please use the correct format with country code.
+
+Example: \`.pair +554712345678\`
+      `.trim(),
+      contextInfo: {
+        forwardingScore: 5,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterName: "INCONNU XD V2",
+          newsletterJid: "120363397722863547@newsletter",
+        },
+      },
+    }, { quoted: m });
   }
 
   try {
-    m.reply("⏳ Fetching pair code...");
+    const response = await axios.get(`https://inconnu-boy-tech-web.onrender.com/pair?number=${encodeURIComponent(text)}`);
+    const { code } = response.data;
 
-    const api = `https://inconnu-boy-tech-bot.onrender.com/pair?phone=${encodeURIComponent(textnumber)}`;
-    const response = await axios.get(api);
-    const data = response.data;
+    if (!code) throw new Error("No pairing code received from server.");
 
-    if (!data?.pair_code) {
-      return m.reply("Failed to retrieve pair code. Check the phone number and try again.");
-    }
+    const successMsg = `
+✅ *Pairing Code Generated!*
 
-    const messagePayload = {
-      text: `${data.pair_code}`,
+👤 Number: ${text}
+🔐 Code: *${code}*
+
+Use this code in your bot panel or CLI to connect the number.
+    `.trim();
+
+    await sock.sendMessage(m.from, {
+      image: { url: 'https://files.catbox.moe/e1k73u.jpg' },
+      caption: successMsg,
       contextInfo: {
+        forwardingScore: 5,
         isForwarded: true,
-        forwardingScore: 777,
-        externalAdReply: {
-          title: data.title || "Pair Device",
-          body: data.creator || "Unknown",
-          thumbnailUrl: data.thumbnail || "",
-          sourceUrl: data.channel_link,
-          mediaType: 1,
-          renderLargerThumbnail: false 
-        }
-      }
-    };
-
-    await gss.sendMessage(m.from, messagePayload, { quoted: m });
+        forwardedNewsletterMessageInfo: {
+          newsletterName: "INCONNU XD V2",
+          newsletterJid: "120363397722863547@newsletter",
+        },
+      },
+    }, { quoted: m });
 
   } catch (err) {
-    console.error("Pair Cmd Error:", err.message);
-    m.reply("An error occurred:\n" + err.message);
+    console.error('Pairing code generation failed:', err);
+
+    const errMsg = `
+❌ *Failed to Generate Pairing Code*
+
+Reason: ${err.response?.data?.error || err.message}
+    `.trim();
+
+    await sock.sendMessage(m.from, {
+      text: errMsg,
+      contextInfo: {
+        forwardingScore: 5,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterName: "INCONNU XD V2",
+          newsletterJid: "120363397722863547@newsletter",
+        },
+      },
+    }, { quoted: m });
   }
 };
 
-export default pairHandler;
+export default sessionGen;
