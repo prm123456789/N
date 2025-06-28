@@ -75,6 +75,7 @@ const menu = async (m, sock) => {
 │ ⬡ autoread
 │ ⬡ pair
 │ ⬡ leave
+│ ⬡ jid
 │ ⬡ autostatusview
 │ ⬡ autotyping
 │ ⬡ autoblock
