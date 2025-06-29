@@ -158,6 +158,7 @@ const menu = async (m, sock) => {
 │ ⬡ goodnight
 │ ⬡ goodmorning
 │ ⬡ love
+│ ⬡ superhero
 │ ⬡ Dare
 │ ⬡ avatar
 │ ⬡ wcg
