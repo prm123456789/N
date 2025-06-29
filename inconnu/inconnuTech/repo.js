@@ -37,7 +37,7 @@ const repo = async (m, sock) => {
 ⭓ Easy to Deploy & Maintain
 
 🎥 *Tutorial & Setup Guide:*
-📺 https://www.youtube.com/@inconnuboytech-s1s
+📺 https://www.youtube.com/@kingtech-y1q
 
 ⭓──────────────────⭓
   BUILT BY INCONNU BOY 
