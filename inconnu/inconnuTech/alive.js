@@ -1,5 +1,13 @@
 const alive = async (m, sock) => {
-  const aliveText = `
+  try {
+    const prefix = '.'; // adapte si tu changes de préfixe
+    const body = m.body || '';
+    const cmd = body.startsWith(prefix) ? body.slice(prefix.length).split(' ')[0].toLowerCase() : body.trim().toLowerCase();
+
+    // Exécuter seulement si le message est exactement "alive" ou "inconnu"
+    if (cmd !== 'alive' && cmd !== 'inconnu') return;
+
+    const aliveText = `
 ━━━━━━━━━━━━━━━
 *INCONNU XD V2 IS ACTIVE* 
 ━━━━━━━━━━━━━━━
@@ -11,23 +19,27 @@ const alive = async (m, sock) => {
 💻 Version: 2.0.0
 
 ━━━━━━━━━━━━━━━
-  `;
+    `;
 
-  const profilePictureUrl = "https://files.catbox.moe/e1k73u.jpg";
+    const profilePictureUrl = "https://files.catbox.moe/e1k73u.jpg";
 
-  await sock.sendMessage(m.from, {
-    image: { url: profilePictureUrl },
-    caption: aliveText.trim(),
-    contextInfo: {
-      forwardingScore: 5,
-      isForwarded: true,
-      forwardedNewsletterMessageInfo: {
-        newsletterName: "INCONNU-XD-V2",
-        newsletterJid: "120363397722863547@newsletter",
+    await sock.sendMessage(m.from, {
+      image: { url: profilePictureUrl },
+      caption: aliveText.trim(),
+      contextInfo: {
+        forwardingScore: 5,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterName: "INCONNU-XD-V2",
+          newsletterJid: "120363397722863547@newsletter",
+        },
+        mentionedJid: [m.sender],
       },
-      mentionedJid: [m.sender],
-    },
-  }, { quoted: m });
+    }, { quoted: m });
+
+  } catch (err) {
+    console.error("[ALIVE ERROR]:", err.message);
+  }
 };
 
 export default alive;
