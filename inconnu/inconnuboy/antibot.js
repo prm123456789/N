@@ -1,14 +1,10 @@
 import config from "../../config.cjs";
 
-// Liste des bots autorisés que tu ne veux pas kicker
 const BOT_WHITELIST = [
-  "1203630xxxxxxx@g.us", // Exemple : un bot qui fait partie du groupe (si tu veux mettre un groupe entier)
-  "1234567890:bot@whatsapp.net", // Exemple : ID d’un bot précis
-  "yourbotnumber@s.whatsapp.net" // Ajoute ici les JIDs de tes bots
+  "yourbotnumber@s.whatsapp.net"
 ];
 
-const antibotSettings = {}; 
-// Structure: { groupId: { mode: "...", warnings: {} } }
+const antibotSettings = {};
 
 export const handleAntibot = async (m, sock, logger, isBotAdmins, isAdmins, isCreator) => {
   const PREFIX = /^[\\/!#.]/;
@@ -16,11 +12,7 @@ export const handleAntibot = async (m, sock, logger, isBotAdmins, isAdmins, isCr
   const prefix = isCOMMAND ? m.body.match(PREFIX)[0] : "/";
   const cmd = isCOMMAND ? m.body.slice(prefix.length).split(" ")[0].toLowerCase() : "";
 
-  if (!antibotSettings[m.from]) {
-    antibotSettings[m.from] = { mode: "off", warnings: {} };
-  }
-
-  // Commande antibot
+  // Si la commande est antibot, on gère la config
   if (cmd === "antibot") {
     if (!m.isGroup)
       return await sock.sendMessage(m.from, { text: "❌ *This command is for groups only.*" }, { quoted: m });
@@ -28,6 +20,10 @@ export const handleAntibot = async (m, sock, logger, isBotAdmins, isAdmins, isCr
       return await sock.sendMessage(m.from, { text: "❌ *I need to be admin to manage Antibot.*" }, { quoted: m });
     if (!isAdmins)
       return await sock.sendMessage(m.from, { text: "❌ *Admins only.*" }, { quoted: m });
+
+    if (!antibotSettings[m.from]) {
+      antibotSettings[m.from] = { mode: "off", warnings: {} };
+    }
 
     const args = m.body.slice(prefix.length + cmd.length).trim().split(/\s+/);
     const action = args[0]?.toLowerCase() || "";
@@ -42,7 +38,7 @@ export const handleAntibot = async (m, sock, logger, isBotAdmins, isAdmins, isCr
           `🔹 ${prefix}antibot warn        (delete + warn)\n` +
           `🔹 ${prefix}antibot kick        (delete + kick instantly)\n` +
           `🔹 ${prefix}antibot warnremove  (warn then kick)\n\n` +
-          `⚙️ *Current mode:* ${antibotSettings[m.from].mode.toUpperCase()}`
+          `⚙️ *Current mode:* ${(antibotSettings[m.from]?.mode || "OFF").toUpperCase()}`
       }, { quoted: m });
     }
 
@@ -53,21 +49,20 @@ export const handleAntibot = async (m, sock, logger, isBotAdmins, isAdmins, isCr
     }, { quoted: m });
   }
 
-  const mode = antibotSettings[m.from].mode;
-  if (mode === "off") return;
+  // Si aucun mode défini, on ignore
+  if (!antibotSettings[m.from] || antibotSettings[m.from].mode === "off") return;
 
-  // Vérifie si c’est un bot
+  // Maintenant, on vérifie tous les messages entrants (même si ce n'est pas une commande)
   if (m.sender.endsWith("bot@whatsapp.net")) {
-    // Si whitelist, ignore
     if (BOT_WHITELIST.includes(m.sender)) return;
-
     if (!isBotAdmins) return;
 
     const groupMetadata = await sock.groupMetadata(m.from);
     const participant = groupMetadata.participants.find(p => p.id === m.sender);
     if (participant?.admin) return;
-
     if (isAdmins || isCreator) return;
+
+    const mode = antibotSettings[m.from].mode;
 
     // Always delete message
     await sock.sendMessage(m.from, { delete: m.key });
