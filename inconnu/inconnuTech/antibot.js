@@ -1,69 +1,114 @@
+
 import config from "../../config.cjs";
 
-const antibotDB = new Map(); // Temporary in-memory storage
+const BOT_WHITELIST = [
+  "yourbotnumber@s.whatsapp.net"
+];
 
-const antibot = async (m, gss) => {
-  try {
-    const cmd = m.body.toLowerCase().trim();
+const antibotSettings = {};
 
-    // Enable antibot
-    if (cmd === "antibot on") {
-      if (!m.isGroup) return m.reply("*Command reserved for groups only*\n\n> *Try it in a group*");
+export const handleAntibot = async (m, sock, logger, isBotAdmins, isAdmins, isCreator) => {
+  const PREFIX = /^[\\/!#.]/;
+  const isCOMMAND = PREFIX.test(m.body);
+  const prefix = isCOMMAND ? m.body.match(PREFIX)[0] : "/";
+  const cmd = isCOMMAND ? m.body.slice(prefix.length).split(" ")[0].toLowerCase() : "";
 
-      const groupMetadata = await gss.groupMetadata(m.from);
-      const participants = groupMetadata.participants;
-      const senderAdmin = participants.find(p => p.id === m.sender)?.admin;
+  // Si la commande est antibot, on gère la config
+  if (cmd === "antibot") {
+    if (!m.isGroup)
+      return await sock.sendMessage(m.from, { text: "❌ *This command is for groups only.*" }, { quoted: m });
+    if (!isBotAdmins)
+      return await sock.sendMessage(m.from, { text: "❌ *I need to be admin to manage Antibot.*" }, { quoted: m });
+    if (!isAdmins)
+      return await sock.sendMessage(m.from, { text: "❌ *Admins only.*" }, { quoted: m });
 
-      if (!senderAdmin) {
-        return m.reply("*Command for admins only*\n\n> *Request admin role*");
-      }
-
-      antibotDB.set(m.from, true);
-      return m.reply("*Antibot is now activated for this group.*\n\n> *Be warned: Do not use bot commands.*");
+    if (!antibotSettings[m.from]) {
+      antibotSettings[m.from] = { mode: "off", warnings: {} };
     }
 
-    // Disable antibot
-    if (cmd === "antibot off") {
-      if (!m.isGroup) return m.reply("*Command only for groups!*\n\n> *Please try it in a group*");
+    const args = m.body.slice(prefix.length + cmd.length).trim().split(/\s+/);
+    const action = args[0]?.toLowerCase() || "";
 
-      const groupMetadata = await gss.groupMetadata(m.from);
-      const participants = groupMetadata.participants;
-      const senderAdmin = participants.find(p => p.id === m.sender)?.admin;
-
-      if (!senderAdmin) {
-        return m.reply("*Only admins can disable antibot!*\n\n> *Smile in pain*");
-      }
-
-      antibotDB.delete(m.from);
-      return m.reply("*Antibot is now disabled for this group.*\n\n> *I'll be back soon*");
+    const validModes = ["off", "delete", "warn", "kick", "warnremove"];
+    if (!validModes.includes(action)) {
+      return await sock.sendMessage(m.from, {
+        text:
+          `📌 *Antibot Usage*\n\n` +
+          `🔹 ${prefix}antibot off\n` +
+          `🔹 ${prefix}antibot delete      (delete bot messages)\n` +
+          `🔹 ${prefix}antibot warn        (delete + warn)\n` +
+          `🔹 ${prefix}antibot kick        (delete + kick instantly)\n` +
+          `🔹 ${prefix}antibot warnremove  (warn then kick)\n\n` +
+          `⚙️ *Current mode:* ${(antibotSettings[m.from]?.mode || "OFF").toUpperCase()}`
+      }, { quoted: m });
     }
 
-    // **🔹 AUTO-DETECT BOT COMMANDS AND DELETE THEM**
-    if (antibotDB.get(m.from)) {
-      const botCommandRegex = /\.menu|\.help|\.ping|\.play|\.owner|\.img|\.repo|\.sc|\.start|\.command/gi;
-      if (botCommandRegex.test(m.body)) {
-        // Delete the message
-        await gss.sendMessage(m.from, { delete: m.key });
+    antibotSettings[m.from].mode = action;
+    antibotSettings[m.from].warnings = {};
+    return await sock.sendMessage(m.from, {
+      text: `✅ *Antibot mode set to:* ${action.toUpperCase()}`
+    }, { quoted: m });
+  }
 
-        // Warn the user
-        await m.reply(`*Bot commands are not allowed in this group!*\n\n> *This is your first warning.*`);
+  // Si aucun mode défini, on ignore
+  if (!antibotSettings[m.from] || antibotSettings[m.from].mode === "off") return;
 
-        // Track warned users
-        const warnedUsers = antibotDB.get(m.from + "_warned") || new Set();
-        if (warnedUsers.has(m.sender)) {
-          // Remove the user if they repeat the violation
-          await gss.groupParticipantsUpdate(m.from, [m.sender], 'remove');
-          return m.reply(`*${m.sender.split('@')[0]} has been removed for using bot commands.*`);
-        } else {
-          warnedUsers.add(m.sender);
-          antibotDB.set(m.from + "_warned", warnedUsers);
-        }
+  // Maintenant, on vérifie tous les messages entrants (même si ce n'est pas une commande)
+  if (m.sender.endsWith("bot@whatsapp.net")) {
+    if (BOT_WHITELIST.includes(m.sender)) return;
+    if (!isBotAdmins) return;
+
+    const groupMetadata = await sock.groupMetadata(m.from);
+    const participant = groupMetadata.participants.find(p => p.id === m.sender);
+    if (participant?.admin) return;
+    if (isAdmins || isCreator) return;
+
+    const mode = antibotSettings[m.from].mode;
+
+    // Always delete message
+    await sock.sendMessage(m.from, { delete: m.key });
+
+    if (mode === "delete") {
+      return await sock.sendMessage(m.from, { text: `🚫 *Bot message detected and deleted.*` });
+    }
+
+    if (mode === "kick") {
+      await sock.groupParticipantsUpdate(m.from, [m.sender], "remove");
+      return await sock.sendMessage(m.from, {
+        text: `🚫 *@${m.sender.split("@")[0]} removed (bot).*`,
+        mentions: [m.sender]
+      });
+    }
+
+    if (mode === "warn") {
+      return await sock.sendMessage(m.from, {
+        text: `⚠️ *@${m.sender.split("@")[0]} Warning!*\nBots are not allowed here.`,
+        mentions: [m.sender]
+      });
+    }
+
+    if (mode === "warnremove") {
+      if (!antibotSettings[m.from].warnings[m.sender]) {
+        antibotSettings[m.from].warnings[m.sender] = 0;
+      }
+      antibotSettings[m.from].warnings[m.sender] += 1;
+
+      const warnings = antibotSettings[m.from].warnings[m.sender];
+      const maxWarnings = config.ANTIBOT_WARNINGS || 3;
+
+      if (warnings >= maxWarnings) {
+        await sock.groupParticipantsUpdate(m.from, [m.sender], "remove");
+        delete antibotSettings[m.from].warnings[m.sender];
+        return await sock.sendMessage(m.from, {
+          text: `🚫 *@${m.sender.split("@")[0]} removed after ${maxWarnings} warnings (bot).*`,
+          mentions: [m.sender]
+        });
+      } else {
+        return await sock.sendMessage(m.from, {
+          text: `⚠️ *@${m.sender.split("@")[0]} Warning ${warnings}/${maxWarnings}!*\nBots are not allowed.`,
+          mentions: [m.sender]
+        });
       }
     }
-  } catch (error) {
-    console.error("Error in Antibot:", error);
-    m.reply("*⚠️ An error occurred while processing Antibot.*\n\n> *Please try again later*");
   }
 };
-
-export default antibot;
