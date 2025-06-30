@@ -21,7 +21,7 @@ const handleMediaCommand = async (m, sock, format = 'mp3') => {
   }
 
   try {
-    await delayTyping(sock, from); // effet "quelqu’un écrit"
+    await delayTyping(sock, from);
 
     const search = await yts(text);
     const video = search.videos[0];
@@ -33,9 +33,19 @@ const handleMediaCommand = async (m, sock, format = 'mp3') => {
     }
 
     const videoId = video.videoId;
-    const apiUrl = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(videoId)}&format=${format}`;
-    const res = await axios.get(apiUrl);
-    const data = res.data;
+    const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    let apiUrl, res, data;
+
+    if (format === 'mp3') {
+      apiUrl = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(videoId)}&format=${format}`;
+      res = await axios.get(apiUrl);
+      data = res.data;
+    } else {
+      // Utiliser l'API jawad-tech uniquement pour la vidéo
+      apiUrl = `https://jawad-tech.vercel.app/download/ytmp3?url=${encodeURIComponent(ytUrl)}`;
+      res = await axios.get(apiUrl);
+      data = res.data;
+    }
 
     if (!data.downloadLink) {
       return sock.sendMessage(from, {
@@ -73,7 +83,6 @@ const handleMediaCommand = async (m, sock, format = 'mp3') => {
       caption,
     }, { quoted: m });
 
-    // Envoi du média
     if (format === 'mp3') {
       await sock.sendMessage(from, {
         audio: { url: data.downloadLink },
