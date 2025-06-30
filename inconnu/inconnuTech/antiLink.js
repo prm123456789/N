@@ -17,64 +17,110 @@ const antiLink = async (m, gss) => {
 
     const command = cmd.slice(prefix.length).trim();
 
-    // Show usage if only "antilink" is typed
+    // Show usage if only "antilink" typed
     if (command === "antilink") {
-      return m.reply(`*╭─❍『 ANTILINK USAGE 』❍\n│  ➤ ${prefix}antilink on\n│  ➤ ${prefix}antilink off\n│\n│  Use to enable or disable link blocking.\n│  ᴘᴏᴡᴇʀᴇᴅ ʙʏ inconnu boy\n╰───────────────━⊷*`);
+      return m.reply(
+`╭─❍ *「 ANTILINK SETTINGS 」* ❍
+│
+│ 📌 *Usage:*
+│
+│   ${prefix}antilink delete
+│   ➤ Delete any detected link.
+│
+│   ${prefix}antilink warn
+│   ➤ Delete + warn the sender.
+│
+│   ${prefix}antilink kick
+│   ➤ Delete + instantly remove sender.
+│
+│   ${prefix}antilink warnremove
+│   ➤ Delete + warn, remove after ${config.ANTILINK_WARNINGS || 3} warnings.
+│
+│   ${prefix}antilink off
+│   ➤ Disable all link blocking.
+│
+│ ⚠️ *Note:*
+│   Only *Group Admins* can configure Antilink.
+│
+╰───────────────━⊷`
+      );
     }
 
-    // Toggle ON manually
-    if (command === "antilink on") {
+    const [main, arg] = command.split(/\s+/);
+
+    const modes = ["delete", "warn", "kick", "warnremove", "off"];
+
+    if (main === "antilink" && modes.includes(arg)) {
       if (!m.isGroup)
-        return m.reply("*╭─❍『 ERROR 』❍\n│  *GROUPS ONLY!*\n╰───────────────━⊷*");
+        return m.reply("❌ *This command is for groups only.*");
 
       const metadata = await gss.groupMetadata(m.from);
       const isAdmin = metadata.participants.find(p => p.id === m.sender)?.admin;
 
       if (!isAdmin)
-        return m.reply("*╭─❍『 ERROR 』❍\n│  *ADMIN ONLY COMMAND!*\n╰───────────────━⊷*");
+        return m.reply("❌ *Admins only can configure Antilink.*");
 
-      antilinkDB[m.from] = true;
+      if (arg === "off") {
+        delete antilinkDB[m.from];
+        saveDB();
+        return m.reply("✅ *Antilink disabled in this group.*");
+      }
+
+      antilinkDB[m.from] = { mode: arg, warnings: {} };
       saveDB();
-      return m.reply(`*╭─❍『 ANTILINK 』❍\n│  ✅ Activated manually!\n│  Use ${prefix}antilink off to disable.\n│  ᴘᴏᴡᴇʀᴇᴅ ʙʏ inconnu boy\n╰───────────────━⊷*`);
+      return m.reply(`✅ *Antilink mode set to: ${arg.toUpperCase()}*`);
     }
 
-    // Toggle OFF
-    if (command === "antilink off") {
-      if (!m.isGroup)
-        return m.reply("*╭─❍『 ERROR 』❍\n│  *GROUPS ONLY!*\n╰───────────────━⊷*");
-
+    // If group has antilink active
+    if (m.isGroup && antilinkDB[m.from]) {
+      const mode = antilinkDB[m.from].mode;
+      const linkRegex = /(https?:\/\/[^\s]+|chat\.whatsapp\.com\/[a-zA-Z0-9]+)/i;
       const metadata = await gss.groupMetadata(m.from);
       const isAdmin = metadata.participants.find(p => p.id === m.sender)?.admin;
 
-      if (!isAdmin)
-        return m.reply("*╭─❍『 ERROR 』❍\n│  *ADMIN ONLY COMMAND!*\n╰───────────────━⊷*");
-
-      delete antilinkDB[m.from];
-      saveDB();
-      return m.reply(`*╭─❍『 ANTILINK 』❍\n│  ❌ Deactivated manually!\n│  Use ${prefix}antilink on to enable.\n│  ᴘᴏᴡᴇʀᴇᴅ ʙʏ inconnu boy\n╰───────────────━⊷*`);
-    }
-
-    // Auto-delete links (respects config.ANTILINK global toggle)
-    const isAutoOn = config.ANTILINK === true;
-    const groupEnabled = antilinkDB[m.from];
-    const shouldBlockLinks = isAutoOn || groupEnabled;
-
-    if (shouldBlockLinks && m.isGroup) {
-      const linkRegex = /(https?:\/\/[^\s]+|chat\.whatsapp\.com\/[a-zA-Z0-9]+)/gi;
-      const metadata = await gss.groupMetadata(m.from);
-      const isAdmin = metadata.participants.find(p => p.id === m.sender)?.admin;
-
-      if (!isAdmin && linkRegex.test(m.body)) {
+      if (linkRegex.test(m.body) && !isAdmin) {
+        // Always delete message
         await gss.sendMessage(m.from, { delete: m.key });
-        return m.reply("*╭─❍『 ANTILINK 』❍\n│  🚫 Link deleted!\n│  Links are not allowed here!\n╰───────────────━⊷*");
+
+        if (mode === "delete") {
+          return m.reply("🚫 *Link detected and deleted.*");
+        }
+
+        if (mode === "warn") {
+          return m.reply(`⚠️ *@${m.sender.split("@")[0]} Warning! Links are not allowed.*`, { mentions: [m.sender] });
+        }
+
+        if (mode === "kick") {
+          await gss.groupParticipantsUpdate(m.from, [m.sender], "remove");
+          return m.reply(`🚫 *@${m.sender.split("@")[0]} has been removed for sharing links.*`, { mentions: [m.sender] });
+        }
+
+        if (mode === "warnremove") {
+          if (!antilinkDB[m.from].warnings[m.sender]) {
+            antilinkDB[m.from].warnings[m.sender] = 0;
+          }
+          antilinkDB[m.from].warnings[m.sender] += 1;
+          saveDB();
+
+          const warns = antilinkDB[m.from].warnings[m.sender];
+          const maxWarns = config.ANTILINK_WARNINGS || 3;
+
+          if (warns >= maxWarns) {
+            await gss.groupParticipantsUpdate(m.from, [m.sender], "remove");
+            delete antilinkDB[m.from].warnings[m.sender];
+            saveDB();
+            return m.reply(`🚫 *@${m.sender.split("@")[0]} removed after ${maxWarns} warnings.*`, { mentions: [m.sender] });
+          } else {
+            return m.reply(`⚠️ *@${m.sender.split("@")[0]} Warning ${warns}/${maxWarns}! Links are not allowed.*`, { mentions: [m.sender] });
+          }
+        }
       }
     }
 
   } catch (e) {
     console.error("AntiLink Error:", e);
-    m.reply("*╭─❍『 ERROR 』❍\n│  ⚠️ Something went wrong!\n╰───────────────━⊷*");
+    m.reply("⚠️ *Error in Antilink system.*");
   }
 };
 
 export default antiLink;
-        
