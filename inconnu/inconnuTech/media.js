@@ -37,12 +37,12 @@ const handleMediaCommand = async (m, sock, format = 'mp3') => {
     let apiUrl, res, data;
 
     if (format === 'mp3') {
-      apiUrl = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(videoId)}&format=${format}`;
+      apiUrl = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(videoId)}&format=mp3`;
       res = await axios.get(apiUrl);
       data = res.data;
     } else {
-      // Utiliser l'API jawad-tech uniquement pour la vidéo
-      apiUrl = `https://jawad-tech.vercel.app/download/ytmp3?url=${encodeURIComponent(ytUrl)}`;
+      // Utiliser l'API mp4 de noobs-api.top pour les vidéos MP4
+      apiUrl = `${BASE_URL}/dipto/ytDl3?link=${encodeURIComponent(videoId)}&format=mp4`;
       res = await axios.get(apiUrl);
       data = res.data;
     }
