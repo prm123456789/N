@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Function to get group admins
 export const getGroupAdmins = (participants) => {
     let admins = [];
     for (let i of participants) {
@@ -67,43 +68,20 @@ const Handler = async (chatUpdate, sock, logger) => {
         const pluginDir = path.join(__dirname, '..', 'inconnuTech');
         const pluginFiles = await fs.readdir(pluginDir);
 
-        let pluginMatched = false; // Check si un plugin a traité la commande
-
         for (const file of pluginFiles) {
             if (file.endsWith('.js')) {
                 const pluginPath = path.join(pluginDir, file);
+               // console.log(`Attempting to load plugin: ${pluginPath}`);
 
                 try {
                     const pluginModule = await import(`file://${pluginPath}`);
                     const loadPlugins = pluginModule.default;
-                    const pluginResult = await loadPlugins(m, sock);
-
-                    if (pluginResult === true) { // Si le plugin gère la commande
-                        pluginMatched = true;
-                        break;
-                    }
+                    await loadPlugins(m, sock);
+                   // console.log(`Successfully loaded plugin: ${pluginPath}`);
                 } catch (err) {
                     console.error(`Failed to load plugin: ${pluginPath}`, err);
                 }
             }
-        }
-
-        // Si c'est une commande et qu'aucun plugin n'a pris en charge
-        if (isCOMMAND(m.body) && !pluginMatched) {
-            const menuText = `❌ Unknown command.\n\nType *menu* to see available commands.`;
-
-            await sock.sendMessage(m.from, {
-                image: { /* empty, no url */ },
-                caption: menuText.trim(),
-                contextInfo: {
-                    forwardingScore: 5,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterName: "INCONNU-XD-V2",
-                        newsletterJid: "120363397722863547@newsletter",
-                    },
-                }
-            }, { quoted: m });
         }
     } catch (e) {
         console.log(e);
