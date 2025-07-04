@@ -10,7 +10,7 @@ const repo = async (m, sock) => {
   if (cmd === "repo") {
     await m.React('🚀');
     const repoUrl = 'https://github.com/INCONNU-BOY/INCONNU-XD-V2';
-    const imageUrl = 'https://files.catbox.moe/e1k73u.jpg';
+    const imageUrl = 'https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg';
 
     try {
       const apiUrl = `https://api.github.com/repos/INCONNU-BOY/INCONNU-XD-V2`;
