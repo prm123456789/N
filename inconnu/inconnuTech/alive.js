@@ -21,7 +21,7 @@ const alive = async (m, sock) => {
 ━━━━━━━━━━━━━━━
     `;
 
-    const profilePictureUrl = "https://files.catbox.moe/e1k73u.jpg";
+    const profilePictureUrl = "https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg";
 
     await sock.sendMessage(m.from, {
       image: { url: profilePictureUrl },
