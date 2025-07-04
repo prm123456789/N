@@ -93,7 +93,8 @@ async function start() {
       browser: ['INCONNU-XD', 'Safari', '3.3'],
       auth: state,
       getMessage: async key => {
-        return { conversation: "inconnu-xd whatsapp user bot" };
+        // Plus de message spam : renvoie un objet vide
+        return {};
       }
     });
 
@@ -124,11 +125,13 @@ async function start() {
             image: { url: 'https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg' },
             caption: `
 ╔═════════════════
-║ ✅ INCONNU CONNECTED
+║ INCONNU XD CONNECTED
 ╠═════════════════
-║ ⚡ DEV INCONNU BOY
+║ PRÉFIXE : ${config.PREFIX}
 ╠═════════════════
-║ ⌛ NUM DEV : +554488138425
+║ DEV INCONNU BOY
+╠═════════════════
+║ NUM DEV : 554488138425
 ╚═════════════════`,
             contextInfo: {
               isForwarded: true,
