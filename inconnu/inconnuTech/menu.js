@@ -35,7 +35,7 @@ const menu = async (m, sock) => {
     // Récupérer nom du propriétaire
     const ownerName = config.OWNER_NAME || "INCONNU BOY";
 
-    let profilePictureUrl = 'https://files.catbox.moe/e1k73u.jpg'; // image par défaut
+    let profilePictureUrl = 'https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg'; // image par défaut
     try {
       const pp = await sock.profilePictureUrl(m.sender, 'image');
       if (pp) {
