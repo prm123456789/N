@@ -17,7 +17,7 @@ const versionCommand = async (m, sock) => {
   `.trim();
 
   await sock.sendMessage(m.from, {
-    image: { url: 'https://files.catbox.moe/e1k73u.jpg' },
+    image: { url: 'https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg' },
     caption: message,
     contextInfo: {
       forwardingScore: 5,
