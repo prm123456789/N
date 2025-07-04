@@ -21,26 +21,22 @@ const tagEveryoneInGroup = async (message, sock) => {
     const participants = groupMeta.participants;
     const senderId = message.sender;
 
-    // Récupère la photo de profil du créateur du message
-    let profilePicture = 'https://i.imgur.com/8fK4h6F.jpg';
+    // Image de secours en cas d'erreur
+    const fallbackImage = 'https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg';
+
+    // Essaie de récupérer la photo de profil du créateur du message
+    let profilePicture = fallbackImage;
     try {
       profilePicture = await sock.profilePictureUrl(senderId, 'image');
-    } catch (e) {}
+    } catch (e) {
+      profilePicture = fallbackImage; // Utilise l'image de secours si erreur
+    }
 
-    // Prépare les mentions (membres + admins)
     const mentions = participants.map(p => p.id);
-
-    // Nombre d'admins
     const adminCount = participants.filter(p => p.admin).length;
-
-    // Nom de l’auteur du message
     const senderName = senderId.split('@')[0];
-
-    // Message personnalisé (ou texte par défaut)
     const rawText = message.body.trim().split(' ').slice(1).join(' ');
     const userText = rawText || 'Blanc';
-
-    // Liste des mentions ligne par ligne
     const tagList = mentions.map(id => `@${id.split('@')[0]}`).join('\n');
 
     const caption = `
