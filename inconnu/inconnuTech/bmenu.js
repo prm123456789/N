@@ -18,7 +18,7 @@ const bugMenu = async (m, sock) => {
     const now = Date.now();
     const runtime = formatRuntime(now - startTime);
 
-    let profilePictureUrl = 'https://files.catbox.moe/e1k73u.jpg';
+    let profilePictureUrl = 'https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg';
     try {
       const pp = await sock.profilePictureUrl(m.sender, 'image');
       if (pp) profilePictureUrl = pp;
