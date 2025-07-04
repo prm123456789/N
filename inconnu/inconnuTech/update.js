@@ -36,7 +36,7 @@ const updateCommand = async (m, sock) => {
         externalAdReply: {
           title: "INCONNU XD V2",
           body: "Restarting...",
-          thumbnailUrl: "https://files.catbox.moe/e1k73u.jpg",
+          thumbnailUrl: "https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg",
           mediaType: 1,
           renderLargerThumbnail: true,
           sourceUrl: "https://github.com/INCONNU-BOY/INCONNU-XD-V2"
@@ -132,7 +132,7 @@ const updateCommand = async (m, sock) => {
           externalAdReply: {
             title: "INCONNU XD V2",
             body: "Update Completed",
-            thumbnailUrl: "https://files.catbox.moe/e1k73u.jpg",
+            thumbnailUrl: "https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg",
             mediaType: 1,
             renderLargerThumbnail: true,
             sourceUrl: "https://github.com/INCONNU-BOY/INCONNU-XD-V2"
