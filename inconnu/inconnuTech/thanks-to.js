@@ -12,7 +12,7 @@ const thanksCommand = async (m, Matrix) => {
 │👨‍💻 DEV : *©INCONNU BOY*
 │👨‍💻 NUM : +554488138425
 │───────────────────
-│🛠️ *BOT:*INCONNU XD V2*
+│🛠️ BOT: *INCONNU XD V2*
 │───────────────────
 │🙋‍♂️ HELLO @${m.sender.split("@")[0]}
 ╰──────────────────❏
@@ -20,7 +20,7 @@ const thanksCommand = async (m, Matrix) => {
 
     try {
         await Matrix.sendMessage(m.from, {
-            image: { url: 'https://files.catbox.moe/e1k73u.jpg' },
+            image: { url: 'https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg' },
             caption: message,
             contextInfo: {
                 mentionedJid: [m.sender],
