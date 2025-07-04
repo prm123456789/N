@@ -17,31 +17,36 @@ const repo = async (m, sock) => {
       const response = await fetch(apiUrl);
       const data = await response.json();
 
+      // Get user name or fallback
+      const contact = await sock.onWhatsApp(m.sender.split('@')[0]);
+      const userName = (contact?.[0]?.notify || m.pushName || 'User').trim();
+
       if (data && data.forks_count !== undefined && data.stargazers_count !== undefined) {
         const menuText = `
-⭓──────────────────⭓
- 💎 *INCONNU-XD V2* 💎
-⭓──────────────────⭓
+🌟 *HELLO INCONNU XD V2 USER (${userName})* 👋
+─────────────────────────────
 
-🌐 *Official GitHub:*
-🔗 ${repoUrl}
+💎 *INCONNU-XD V2 OFFICIAL REPOSITORY* 💎
 
-📈 *Live Repo Stats:*
-⭐ Stars: \`${data.stargazers_count}\`
-🍴 Forks: \`${data.forks_count}\`
+🔗 *GitHub Link:* 
+${repoUrl}
 
-✨ *Features You’ll Love:*
-⭓ Multi-Session Support
-⭓ Auto QR Mode
-⭓ Stylish UI + Animated CMDs
-⭓ Easy to Deploy & Maintain
+📊 *Live Repository Stats:*
+⭐ Stars: *${data.stargazers_count}*
+🍴 Forks: *${data.forks_count}*
 
-🎥 *Tutorial & Setup Guide:*
-📺 https://www.youtube.com/@kingtech-y1q
+🚀 *Why Choose INCONNU-XD V2?*
+✅ Multi-Session Support
+✅ Auto QR Mode
+✅ Stylish UI & Animated Commands
+✅ Easy Deploy & Maintain
 
-⭓──────────────────⭓
-  BUILT BY INCONNU BOY 
-⭓──────────────────⭓
+🎥 *Watch Tutorial & Setup:*
+https://www.youtube.com/@kingtech-y1q
+
+─────────────────────────────
+🔧 *BUILT WITH ❤️ BY INCONNU BOY*
+─────────────────────────────
         `.trim();
 
         await sock.sendMessage(m.from, {
@@ -59,7 +64,7 @@ const repo = async (m, sock) => {
 
       } else {
         await sock.sendMessage(m.from, {
-          text: '⚠️ GitHub repo data unavailable. Try again later.',
+          text: '⚠️ GitHub repository data unavailable. Please try again later.',
           quoted: m
         });
       }
