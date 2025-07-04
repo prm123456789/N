@@ -124,6 +124,8 @@ async function start() {
           await sock.sendMessage(sock.user.id, {
             image: { url: 'https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg' },
             caption: `
+HELLO INCONNU XD V2 USER (${sock.user.name || 'Unknown'})
+
 ╔═════════════════
 ║ INCONNU XD CONNECTED
 ╠═════════════════
