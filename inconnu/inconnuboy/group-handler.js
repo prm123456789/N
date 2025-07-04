@@ -39,16 +39,23 @@ export default async function GroupParticipants(sock, { id, participants, action
          if (action === "add" && config.WELCOME === true) {
             const welcomeMessage = {
                image: { url: profilePic },
-               caption: `┏━━❰ 𝙒𝙀𝙇𝘾𝙊𝙈𝙀 𝙁𝙍𝙄𝙀𝙉𝘿 ❱━━┓
+               caption: `
+🎉 *WELCOME TO ${groupName}*
 
-👤 𝙉𝙚𝙬 𝙈𝙚𝙢𝙗𝙚𝙧: @${userName}
-🏠 𝙂𝙧𝙤𝙪𝙥: *${groupName}*
-🔢 𝙏𝙤𝙩𝙖𝙡 𝙈𝙚𝙢𝙗𝙚𝙧𝙨: *${membersCount}*
-📅 𝘿𝙖𝙩𝙚 𝙅𝙤𝙞𝙣𝙚𝙙: *${date}*
-🕒 𝙏𝙞𝙢𝙚: *${time}*
+👤 *User:* @${userName}
 
-┗━━━━━━━━━━━━━━✦
-⬡ MADE IN ${newsletterName}`,
+🏠 *Group:* ${groupName}
+
+🔢 *Members:* ${membersCount}
+
+📅 *Date Joined:* ${date}
+
+🕒 *Time:* ${time}
+
+📌 _Let's give a warm welcome!_
+━━━━━━━━━━━━━━━━━━━━━
+⚡ *MADE IN BY ${newsletterName}*
+`.trim(),
                mentions: [jid],
                contextInfo: getNewsletterContext(jid)
             };
@@ -59,16 +66,23 @@ export default async function GroupParticipants(sock, { id, participants, action
          if (action === "remove" && config.WELCOME === true) {
             const goodbyeMessage = {
                image: { url: profilePic },
-               caption: `┏━━❰ 𝙂𝙊𝙊𝘿𝘽𝙔𝙀 𝙁𝙍𝙄𝙀𝙉𝘿 ❱━━┓
+               caption: `
+👋 *GOODBYE FROM ${groupName}*
 
-😔 𝘽𝙮𝙚 @${userName}
-🚪 𝙇𝙚𝙛𝙩 𝙩𝙝𝙚 𝙜𝙧𝙤𝙪𝙥: *${groupName}*
-📅 𝘿𝙖𝙩𝙚: *${date}*
-🕒 𝙏𝙞𝙢𝙚: *${time}*
-👥 𝙍𝙚𝙢𝙖𝙞𝙣𝙞𝙣𝙜 𝙈𝙚𝙢𝙗𝙚𝙧𝙨: *${membersCount}*
+😔 *User:* @${userName}
 
-┗━━━━━━━━━━━━━━✦
-⬡ MADE IN ${newsletterName}`,
+🚪 *Left:* ${groupName}
+
+📅 *Date:* ${date}
+
+🕒 *Time:* ${time}
+
+👥 *Remaining Members:* ${membersCount}
+
+_We'll miss you!_
+━━━━━━━━━━━━━━━━━━━━━
+⚡ *MADE IN BY ${newsletterName}*
+`.trim(),
                mentions: [jid],
                contextInfo: getNewsletterContext(jid)
             };
