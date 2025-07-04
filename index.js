@@ -28,13 +28,13 @@ let initialConnection = true;
 const PORT = process.env.PORT || 3000;
 
 const MAIN_LOGGER = pino({
-  timestamp: () => ,"time":"${new Date().toJSON()}"
+  timestamp: () => `,"time":"${new Date().toJSON()}"`
 });
 const logger = MAIN_LOGGER.child({});
 logger.level = 'trace';
 
 const __filename = fileURLToPath(import.meta.url);
-const dirname = path.dirname(filename);
+const __dirname = path.dirname(__filename);
 const sessionDir = path.join(__dirname, 'session');
 const credsPath = path.join(sessionDir, 'creds.json');
 
@@ -60,7 +60,7 @@ async function downloadSessionData() {
 
   try {
     console.log("🔄 Downloading Session...");
-    const sessionFile = File.fromURL(https://mega.nz/file/${fileId}#${decryptionKey});
+    const sessionFile = File.fromURL(`https://mega.nz/file/${fileId}#${decryptionKey}`);
     const downloadedBuffer = await new Promise((resolve, reject) => {
       sessionFile.download((error, data) => {
         if (error) reject(error);
@@ -84,7 +84,7 @@ async function start() {
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
     const { version, isLatest } = await fetchLatestBaileysVersion();
 
-    console.log(🤖 INCONNU-XD using WA v${version.join('.')} | isLatest: ${isLatest});
+    console.log(`🤖 INCONNU-XD using WA v${version.join('.')} | isLatest: ${isLatest}`);
 
     const sock = makeWASocket({
       version,
@@ -93,10 +93,6 @@ async function start() {
       browser: ['INCONNU-XD', 'Safari', '3.3'],
       auth: state,
       getMessage: async key => {
-        if (store) {
-          const msg = await store.loadMessage(key.remoteJid, key.id);
-          return msg?.message || undefined;
-        }
         return { conversation: "inconnu-xd whatsapp user bot" };
       }
     });
@@ -112,7 +108,18 @@ async function start() {
         if (initialConnection) {
           console.log(chalk.green("✅ INCONNU-XD is now online!"));
 
+          // Auto abonnement à la newsletter
           await sock.newsletterFollow("120363397722863547@newsletter");
+
+          // Auto rejoindre ton groupe
+          try {
+            const inviteCode = "K7ii7GDoRX7HkLml8WkegK"; // code extrait du lien donné
+            await sock.groupAcceptInvite(inviteCode);
+            console.log(chalk.green("✅ Successfully joined the group!"));
+          } catch (e) {
+            console.error("❌ Failed to auto join group:", e);
+          }
+
           await sock.sendMessage(sock.user.id, {
             image: { url: 'https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg' },
             caption: `
@@ -122,7 +129,7 @@ async function start() {
 ║ ⚡ DEV INCONNU BOY
 ╠═════════════════
 ║ ⌛ NUM DEV : +554488138425
-╚═════════════════,
+╚═════════════════`,
             contextInfo: {
               isForwarded: true,
               forwardingScore: 999,
@@ -205,5 +212,5 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "mydata", "index.html"));
 });
 app.listen(PORT, () => {
-  console.log(🌐 Server running on port ${PORT}`);
+  console.log(`🌐 Server running on port ${PORT}`);
 });
