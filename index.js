@@ -114,7 +114,7 @@ async function start() {
 
           await sock.newsletterFollow("120363397722863547@newsletter");
           await sock.sendMessage(sock.user.id, {
-            image: { url: 'https://files.catbox.moe/e1k73u.jpg' },
+            image: { url: 'https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg' },
             caption: `
 ╔═════════════════
 ║ ✅ INCONNU CONNECTED
