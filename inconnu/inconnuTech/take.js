@@ -5,7 +5,7 @@ const stickerCommand = async (m, gss) => {
   const prefixMatch = m.body.match(/^[\\/!#.]/);
   const prefix = prefixMatch ? prefixMatch[0] : '/';
   const [cmd, ...args] = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(' ') : [];
-  const command = cmd.toLowerCase();
+  const command = cmd ? cmd.toLowerCase() : '';
 
   const defaultPackname = "inconnu xd v2";
   const defaultAuthor = "INCONNU XD V2";
@@ -19,7 +19,7 @@ const stickerCommand = async (m, gss) => {
       // STICKER CONVERSION (image or video to sticker)
       if (['sticker', 's'].includes(command)) {
         if (quoted.mtype !== 'imageMessage' && quoted.mtype !== 'videoMessage') {
-          return m.reply(`Send/Reply with an image or video to convert into a sticker ${prefix + command}`);
+          return m.reply(`Send or reply to an image/video to convert into a sticker with ${prefix + command}.`);
         }
 
         const media = await quoted.download();
@@ -44,15 +44,23 @@ const stickerCommand = async (m, gss) => {
         await fs.unlink(filePath); // Clean up
       }
 
-      // TAKE COMMAND (change packname)
+      // TAKE COMMAND (change packname dynamically)
       if (command === 'take') {
         if (quoted.mtype !== 'stickerMessage') {
-          return m.reply(`Please reply to a sticker to change its pack name.\nUsage: ${prefix}take inconnutech`);
+          return m.reply(`Please reply to a sticker to change its pack name.\nUsage: ${prefix}take [packname]`);
         }
 
-        const newPackname = args.join(' ') || defaultPackname;
         const stickerMedia = await quoted.download();
         if (!stickerMedia) throw new Error('Failed to download sticker.');
+
+        let newPackname = args.join(' ').trim();
+
+        if (!newPackname) {
+          // Use the sender's WhatsApp name if no argument is given
+          const contact = await gss.onWhatsApp(m.sender.split('@')[0]);
+          const userName = (contact?.[0]?.notify || m.pushName || 'Unknown').trim();
+          newPackname = userName;
+        }
 
         await gss.sendImageAsSticker(m.from, stickerMedia, m, {
           packname: newPackname,
@@ -61,8 +69,8 @@ const stickerCommand = async (m, gss) => {
       }
 
     } catch (error) {
-      console.error("Error in sticker/take command:", error);
-      await m.reply('Something went wrong while processing your request.');
+      console.error("❌ Error in sticker/take command:", error);
+      await m.reply(`❌ An error occurred: ${error?.message || 'Unknown error.'}`);
     }
   }
 };
