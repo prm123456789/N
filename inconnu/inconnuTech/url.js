@@ -1,27 +1,33 @@
 import fetch from 'node-fetch';
 import FormData from 'form-data';
 import { fileTypeFromBuffer } from 'file-type';
-import { writeFile, unlink } from 'fs/promises';
 
 const MAX_FILE_SIZE_MB = 200;
+
 async function uploadMedia(buffer) {
   try {
-    const { ext } = await fileTypeFromBuffer(buffer);
-    const bodyForm = new FormData();
-    bodyForm.append("fileToUpload", buffer, "file." + ext);
-    bodyForm.append("reqtype", "fileupload");
+    const { ext, mime } = await fileTypeFromBuffer(buffer);
+    const form = new FormData();
+    form.append('upload', buffer, { filename: `file.${ext}`, contentType: mime });
+    form.append('numfiles', '1');
+    form.append('expiration', '0');
+    form.append('type', 'file');
 
-    const res = await fetch("https://catbox.moe/user/api.php", {
+    const res = await fetch("https://postimages.org/json/rr", {
       method: "POST",
-      body: bodyForm,
+      body: form,
+      headers: {
+        "origin": "https://postimages.org",
+        "referer": "https://postimages.org/",
+      },
     });
 
-    if (!res.ok) {
-      throw new Error(`Upload failed with status ${res.status}: ${res.statusText}`);
-    }
+    if (!res.ok) throw new Error(`Upload failed with status ${res.status}: ${res.statusText}`);
 
-    const data = await res.text();
-    return data;
+    const json = await res.json();
+    if (!json || !json.url) throw new Error('Upload did not return a valid URL.');
+
+    return json.url; // direct link like https://i.postimg.cc/xxx/filename.jpg
   } catch (error) {
     console.error("Error during media upload:", error);
     throw new Error('Failed to upload media');
@@ -62,35 +68,38 @@ const tourl = async (m, bot) => {
       }, 500);
 
       const media = await m.quoted.download();
-      if (!media) throw new Error('Failed to download media.');
+      if (!media) {
+        clearInterval(loadingInterval);
+        return m.reply('❌ Failed to download media.');
+      }
 
       const fileSizeMB = media.length / (1024 * 1024);
       if (fileSizeMB > MAX_FILE_SIZE_MB) {
         clearInterval(loadingInterval);
-        return m.reply(`File size exceeds the limit of ${MAX_FILE_SIZE_MB}MB.`);
+        return m.reply(`❌ File size exceeds the limit of ${MAX_FILE_SIZE_MB}MB.`);
       }
+
       const mediaUrl = await uploadMedia(media);
 
       clearInterval(loadingInterval);
-      await bot.sendMessage(m.from, { text: '✅ Loading complete.' }, { quoted: m });
+      await bot.sendMessage(m.from, { text: '✅ Upload complete.' }, { quoted: m });
 
       const mediaType = getMediaType(m.quoted.mtype);
       if (mediaType === 'audio') {
         const message = {
-          text: `*Hey ${m.pushName} Here Is Your Audio URL*\n*Url:* ${mediaUrl}`,
+          text: `🎵 *Here is your audio URL:*\n${mediaUrl}`,
         };
         await bot.sendMessage(m.from, message, { quoted: m });
       } else {
         const message = {
           [mediaType]: { url: mediaUrl },
-          caption: `*ᴜʀʟ:* *${mediaUrl}*\n\n*ᴘᴏᴡᴇʀᴇᴅ ʙʏ inconnu xd v2*`,
+          caption: `🌐 *URL:* ${mediaUrl}\n\n🔧 Powered by INCONNU XD V2`,
         };
         await bot.sendMessage(m.from, message, { quoted: m });
       }
-
     } catch (error) {
       console.error('Error processing media:', error);
-      m.reply('Error processing media.');
+      m.reply('❌ Error processing media.');
     }
   }
 };
