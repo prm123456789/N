@@ -10,21 +10,21 @@ const promote = async (m, gss) => {
     const validCommands = ['promote', 'admin', 'toadmin'];
     if (!validCommands.includes(cmd)) return;
 
-    if (!m.isGroup) return m.reply("*gяσυρ ¢σммαη∂*");
+    if (!m.isGroup) return m.reply("🔒 *Group Command Only!*");
 
     const groupMetadata = await gss.groupMetadata(m.from);
     const participants = groupMetadata.participants;
 
     const isBotAdmin = participants.find(p => p.id === botNumber)?.admin;
-    if (!isBotAdmin) return m.reply("*αм ησт α∂мιη ιη тнιѕ ι∂ισт gяσυρ*");
+    if (!isBotAdmin) return m.reply("❌ *I'm not an admin in this group!*");
 
     const sender = m.sender;
     const isOwner = sender === config.OWNER_NUMBER + '@s.whatsapp.net';
     const isSudo = config.SUDO?.includes(sender);
-
     const isGroupAdmin = participants.find(p => p.id === sender)?.admin;
+
     if (!isOwner && !isSudo && !isGroupAdmin) {
-      return m.reply("*α∂мιη яυℓє ι∂ισт*");
+      return m.reply("🚫 *Only admins can use this command!*");
     }
 
     if (!m.mentionedJid) m.mentionedJid = [];
@@ -37,7 +37,7 @@ const promote = async (m, gss) => {
       : [];
 
     if (users.length === 0) {
-      return m.reply("*мєηтιση α υѕєя тσ ρяσмσтє*");
+      return m.reply("⚠️ *Please mention a user to promote!*");
     }
 
     const validUsers = users.filter(Boolean);
@@ -56,14 +56,13 @@ const promote = async (m, gss) => {
     await gss.groupParticipantsUpdate(m.from, validUsers, 'promote')
       .then(() => {
         const promotedNames = usernames.map(u => `@${u}`).join(', ');
-        m.reply(`*Users ${promotedNames} promoted successfully in the group ${groupMetadata.subject}.*`);
+        m.reply(`✅ *Promotion Successful!*\n👤 Users: ${promotedNames}\n🏷️ Group: *${groupMetadata.subject}*`);
       })
-      .catch(() => m.reply('Failed to promote user(s) in the group.'));
+      .catch(() => m.reply("❗ *Failed to promote user(s). Please try again.*"));
   } catch (error) {
     console.error('Error:', error);
-    m.reply('An error occurred while processing the command.');
+    m.reply("💥 *An unexpected error occurred while processing your command.*");
   }
 };
 
 export default promote;
-      
