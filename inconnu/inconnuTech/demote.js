@@ -10,13 +10,13 @@ const demote = async (m, gss) => {
     const validCommands = ['demote', 'unadmin', 'todown'];
     if (!validCommands.includes(cmd)) return;
 
-    if (!m.isGroup) return m.reply("*gяσυρ ¢σммαη∂*");
+    if (!m.isGroup) return m.reply("🔒 *Group Command Only!*");
 
     const groupMetadata = await gss.groupMetadata(m.from);
     const participants = groupMetadata.participants;
 
     const isBotAdmin = participants.find(p => p.id === botNumber)?.admin;
-    if (!isBotAdmin) return m.reply("*αм ησт α∂мιη ιη тнιѕ ι∂ισт gяσυρ*");
+    if (!isBotAdmin) return m.reply("❌ *I'm not an admin in this group!*");
 
     const sender = m.sender;
     const isOwner = sender === config.OWNER_NUMBER + '@s.whatsapp.net';
@@ -24,7 +24,7 @@ const demote = async (m, gss) => {
     const isGroupAdmin = participants.find(p => p.id === sender)?.admin;
 
     if (!isOwner && !isSudo && !isGroupAdmin) {
-      return m.reply("*α∂мιη яυℓє ι∂ισт*");
+      return m.reply("🚫 *Only admins can use this command!*");
     }
 
     if (!m.mentionedJid) m.mentionedJid = [];
@@ -37,7 +37,7 @@ const demote = async (m, gss) => {
       : [];
 
     if (users.length === 0) {
-      return m.reply("*мєηтιση α υѕєя тσ ∂ємσтє*");
+      return m.reply("⚠️ *Please mention a user to demote!*");
     }
 
     const validUsers = users.filter(Boolean);
@@ -56,12 +56,12 @@ const demote = async (m, gss) => {
     await gss.groupParticipantsUpdate(m.from, validUsers, 'demote')
       .then(() => {
         const demotedNames = usernames.map(u => `@${u}`).join(', ');
-        m.reply(`*Users ${demotedNames} demoted successfully in the group ${groupMetadata.subject}.*`);
+        m.reply(`✅ *Demotion Successful!*\n👤 Users: ${demotedNames}\n🏷️ Group: *${groupMetadata.subject}*`);
       })
-      .catch(() => m.reply('Failed to demote user(s) in the group.'));
+      .catch(() => m.reply("❗ *Failed to demote user(s). Please try again.*"));
   } catch (error) {
     console.error('Error:', error);
-    m.reply('An error occurred while processing the command.');
+    m.reply("💥 *An unexpected error occurred while processing your command.*");
   }
 };
 
