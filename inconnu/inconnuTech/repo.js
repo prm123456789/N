@@ -42,11 +42,11 @@ ${repoUrl}
 ✅ Easy Deploy & Maintain
 
 🎥 *Watch Tutorial & Setup:*
-https://www.youtube.com/@kingtech-y1q
+https://www.youtube.com/@inconnuboytech-o1g
 
-─────────────────────────────
-🔧 *BUILT WITH ❤️ BY INCONNU BOY*
-─────────────────────────────
+─────────────────
+*❤️ BY INCONNU BOY*
+──────────────────
         `.trim();
 
         await sock.sendMessage(m.from, {
