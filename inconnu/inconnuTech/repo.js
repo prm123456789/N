@@ -42,7 +42,7 @@ ${repoUrl}
 ✅ Easy Deploy & Maintain
 
 🎥 *Watch Tutorial & Setup:*
-https://www.youtube.com/@inconnuboytech-o1g
+https://www.youtube.com/@techbot-u9d
 
 ─────────────────
 *❤️ BY INCONNU BOY*
