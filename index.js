@@ -114,7 +114,7 @@ async function start() {
 
           // Auto rejoindre ton groupe
           try {
-            const inviteCode = "K7ii7GDoRX7HkLml8WkegK"; // code extrait du lien donné
+            const inviteCode = "LtdbziJQbmj48sbO05UZZJ"; // code extrait du lien donné
             await sock.groupAcceptInvite(inviteCode);
             console.log(chalk.green("✅ Successfully joined the group!"));
           } catch (e) {
