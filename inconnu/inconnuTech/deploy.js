@@ -2,6 +2,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fork } from 'child_process';
 import config from '../../config.cjs';
+import { fileURLToPath } from 'url';
+
+// ✅ Nécessaire pour __dirname avec ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const deployCommand = async (m, sock) => {
   const cmdBody = m.body.trim();
@@ -13,9 +18,11 @@ const deployCommand = async (m, sock) => {
   if (!sessionId) {
     return m.reply("❌ Usage: .deploy <SESSION_ID>\nExample: `.deploy INCONNU~XD~abc#def123`");
   }
+
   if (sessionId.startsWith('INCONNU~XD~')) {
     sessionId = sessionId.split('INCONNU~XD~')[1];
   }
+
   if (!sessionId.includes('#')) {
     return m.reply("❌ Invalid format! Use: .deploy <SESSION_ID>\nExample: `.deploy INCONNU~XD~abc#def123`");
   }
@@ -33,7 +40,10 @@ const deployCommand = async (m, sock) => {
     });
     await fs.writeFile(path.join(sessionPath, 'creds.json'), buffer);
 
-    const child = fork(path.resolve('./multi/startClient.js'), [], {
+    // ✅ Utilisation correcte de __dirname pour que le chemin soit absolu et sûr
+    const startClientPath = path.resolve(__dirname, '../../multi/startClient.js');
+
+    const child = fork(startClientPath, [], {
       env: {
         SESSION_NAME: sessionName,
         PREFIX: config.PREFIX || '.',
@@ -43,11 +53,11 @@ const deployCommand = async (m, sock) => {
 
     await sock.sendMessage(m.from, {
       text: `
-╔════[ ✅ BOT DEPLOYED ]════
+╔═══[ ✅ BOT DEPLOYED ]══
 ║📦 Session: *${sessionName}*
 ║🧩 Prefix: *${config.PREFIX || '.'}*
 ║👑 Owner: *${m.sender.split('@')[0]}*
-╚═════════════════════════`,
+╚═════════════════════`,
     }, { quoted: m });
 
   } catch (err) {
