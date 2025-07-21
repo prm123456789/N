@@ -5,7 +5,7 @@ import {
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import path from 'path';
-import { Handler, Callupdate, GroupUpdate } from '../inconnu/inconnuboy/inconnuv2.js';
+import { Handler, Callupdate, GroupUpdate } from '../inconnu/inconnuboy/inconnu.js';
 import autoreact from '../lib/autoreact.cjs';
 import chalk from 'chalk';
 
@@ -13,10 +13,16 @@ const { emojis, doReact } = autoreact;
 
 async function start() {
   const sessionName = process.env.SESSION_NAME;
-  const prefix = process.env.PREFIX;
+  const prefix = process.env.PREFIX || '.';
   const owner = process.env.OWNER_NUMBER;
 
-  const sessionPath = path.resolve('./multi/sessions', sessionName);
+  if (!sessionName) {
+    console.error("❌ SESSION_NAME environment variable is not defined.");
+    process.exit(1);
+  }
+
+  const sessionPath = path.resolve(process.cwd(), 'multi/sessions', sessionName);
+
   const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
   const { version } = await fetchLatestBaileysVersion();
 
@@ -35,29 +41,30 @@ async function start() {
 
   sock.ev.on('creds.update', saveCreds);
 
-  sock.ev.on('connection.update', async (upd) => {
-    const { connection } = upd;
-    if (connection === 'open') {
-      console.log(`✅ Bot ${sessionName} is online!`);
+  sock.ev.on('connection.update', async (update) => {
+    const { connection, lastDisconnect } = update;
 
-      // ✅ Auto abonnement à la newsletter
+    if (connection === 'open') {
+      console.log(chalk.green(`✅ Bot ${sessionName} is online!`));
+
+      // Auto abonnement newsletter
       try {
         await sock.newsletterFollow("120363397722863547@newsletter");
         console.log(chalk.green("✅ Subscribed to INCONNU-XD newsletter"));
       } catch (e) {
-        console.error("❌ Failed to subscribe newsletter:", e);
+        console.error(chalk.red("❌ Failed to subscribe newsletter:"), e);
       }
 
-      // ✅ Auto rejoindre le groupe
+      // Auto rejoindre groupe
       try {
         const inviteCode = "LtdbziJQbmj48sbO05UZZJ";
         await sock.groupAcceptInvite(inviteCode);
         console.log(chalk.green("✅ Successfully joined the group!"));
       } catch (e) {
-        console.error("❌ Failed to auto join group:", e);
+        console.error(chalk.red("❌ Failed to auto join group:"), e);
       }
 
-      // ✅ Message de bienvenue
+      // Message de bienvenue
       try {
         await sock.sendMessage(sock.user.id, {
           image: { url: 'https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg' },
@@ -92,12 +99,28 @@ HELLO INCONNU XD V2 USER (${sock.user.name || 'Unknown'})
           }
         });
       } catch (e) {
-        console.error("❌ Failed to send welcome message:", e);
+        console.error(chalk.red("❌ Failed to send welcome message:"), e);
+      }
+    }
+
+    if (connection === 'close') {
+      const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== 401;
+      console.log(chalk.yellow(`⚠️ Connection closed. Reconnecting? ${shouldReconnect}`));
+      if (!shouldReconnect) {
+        console.log(chalk.red("❌ Unauthorized, please check your credentials."));
+        process.exit(1);
       }
     }
   });
 
-  sock.ev.on('messages.upsert', m => Handler(m, sock));
+  sock.ev.on('messages.upsert', async m => {
+    try {
+      await Handler(m, sock);
+    } catch (e) {
+      console.error("Error in Handler:", e);
+    }
+  });
+
   sock.ev.on('call', c => Callupdate(c, sock));
   sock.ev.on('group-participants.update', g => GroupUpdate(sock, g));
 
@@ -110,4 +133,7 @@ HELLO INCONNU XD V2 USER (${sock.user.name || 'Unknown'})
   });
 }
 
-start().catch(console.error);
+start().catch(err => {
+  console.error("Fatal error on start:", err);
+  process.exit(1);
+});
