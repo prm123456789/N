@@ -35,14 +35,28 @@ const deployCommand = async (m, sock) => {
     const [fileId, key] = sessionId.split('#');
     const { File } = await import('megajs');
     const file = File.fromURL(`https://mega.nz/file/${fileId}#${key}`);
+
     const buffer = await new Promise((res, rej) => {
       file.download((e, d) => e ? rej(e) : res(d));
     });
     await fs.writeFile(path.join(sessionPath, 'creds.json'), buffer);
 
-    // ✅ Utilisation correcte de __dirname pour que le chemin soit absolu et sûr
-    const startClientPath = path.resolve(__dirname, '../../multi/startClient.js');
+    // Construire le chemin absolu à partir du dossier courant (process.cwd())
+    const startClientPath = path.resolve(process.cwd(), 'multi/startClient.js');
+    console.log("Forking startClient with path:", startClientPath);
 
+    // Vérifier que le fichier existe et est accessible
+    try {
+      await fs.access(startClientPath);
+      console.log("File startClient.js found and accessible.");
+    } catch (err) {
+      console.error("File startClient.js NOT found or NOT accessible:", err);
+      return await sock.sendMessage(m.from, {
+        text: "❌ Deployment failed! startClient.js file not found or inaccessible."
+      }, { quoted: m });
+    }
+
+    // Lancer le fork avec les variables d'environnement nécessaires
     const child = fork(startClientPath, [], {
       env: {
         SESSION_NAME: sessionName,
@@ -61,7 +75,7 @@ const deployCommand = async (m, sock) => {
     }, { quoted: m });
 
   } catch (err) {
-    console.error(err);
+    console.error("Deployment error:", err);
     await sock.sendMessage(m.from, {
       text: "❌ Deployment failed! Make sure your MEGA link is valid and try again."
     }, { quoted: m });
