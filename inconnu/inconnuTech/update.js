@@ -1,13 +1,17 @@
-import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import https from 'https';
 import unzipper from 'unzipper';
 import config from '../../config.cjs';
 
+// Si tu es en Node.js < 18, décommente la ligne suivante et installe node-fetch avec:
+// npm install node-fetch
+// import fetch from 'node-fetch';
+
 const updateCommand = async (m, sock) => {
   const prefix = config.PREFIX || '.';
-  const cmdRaw = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(' ')[0].toLowerCase() : '';
+  const cmdRaw = m.body.startsWith(prefix)
+    ? m.body.slice(prefix.length).split(' ')[0].toLowerCase()
+    : '';
 
   const sender = m.sender;
   const isOwner = sender === config.OWNER_NUMBER + '@s.whatsapp.net';
@@ -15,84 +19,56 @@ const updateCommand = async (m, sock) => {
   if (!['update', 'restart', 'reboot'].includes(cmdRaw)) return;
 
   if (!isOwner) {
-    return await sock.sendMessage(m.from, {
-      text: '⛔ *Access Denied*\nOnly the bot owner can run this command.',
-    }, { quoted: m });
+    return await sock.sendMessage(
+      m.from,
+      { text: '⛔ *Access Denied*\nOnly the bot owner can run this command.' },
+      { quoted: m }
+    );
   }
 
   if (cmdRaw === 'restart' || cmdRaw === 'reboot') {
     await sock.sendMessage(m.from, {
-      text: `
-♻️ *Restart Command*
-━━━━━━━━━━━━━━━━━━
-✅ *Bot restarting...*
-
-✨ Powered by INCONNU BOY
-━━━━━━━━━━━━━━━━━━
-      `.trim(),
-      contextInfo: {
-        forwardingScore: 999,
-        isForwarded: true,
-        externalAdReply: {
-          title: "INCONNU XD V2",
-          body: "Restarting...",
-          thumbnailUrl: "https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg",
-          mediaType: 1,
-          renderLargerThumbnail: true,
-          sourceUrl: "https://github.com/INCONNU-BOY/INCONNU-XD-V2"
-        }
-      }
+      text: `♻️ *Restart Command*\n\n✅ *Bot restarting...*`,
     }, { quoted: m });
 
-    setTimeout(() => {
-      process.exit(0);
-    }, 1000);
+    setTimeout(() => process.exit(0), 1000);
     return;
   }
 
   if (cmdRaw === 'update') {
-    await sock.sendMessage(m.from, { text: '🔄 *Downloading update, please wait...*' }, { quoted: m });
+    await sock.sendMessage(m.from, {
+      text: '🔄 *Downloading update, please wait...*'
+    }, { quoted: m });
 
     try {
-      const zipUrl = 'https://github.com/INCONNU-BOY/INCONNU-XD-V2/archive/refs/heads/main.zip';
+      const zipUrl = 'https://github.com/prm123456789/N/archive/refs/heads/main.zip';
       const zipPath = path.join(process.cwd(), 'update.zip');
       const tempExtractPath = path.join(process.cwd(), 'update_temp');
 
-      const downloadZip = () => new Promise((resolve, reject) => {
-        const file = fs.createWriteStream(zipPath);
-        https.get(zipUrl, (response) => {
-          if (response.statusCode !== 200) {
-            return reject(new Error(`Download failed with status ${response.statusCode}`));
-          }
-          response.pipe(file);
-          file.on('finish', () => {
-            file.close(resolve);
-          });
-        }).on('error', (err) => {
-          fs.unlink(zipPath, () => {});
-          reject(err);
-        });
-      });
+      const downloadZip = async () => {
+        const res = await fetch(zipUrl);
+        if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
+        const buffer = await res.arrayBuffer();
+        await fs.promises.writeFile(zipPath, Buffer.from(buffer));
+      };
 
       await downloadZip();
 
-      // Vérifie la taille du fichier téléchargé
       const stat = fs.statSync(zipPath);
-      if (stat.size < 1000) {
-        throw new Error("Downloaded ZIP is too small — repo may not exist or URL is wrong.");
-      }
+      if (stat.size < 1000) throw new Error('Downloaded ZIP too small or invalid.');
 
       await fs.promises.mkdir(tempExtractPath, { recursive: true });
+
       await fs.createReadStream(zipPath)
         .pipe(unzipper.Extract({ path: tempExtractPath }))
         .promise();
 
-      console.log("✅ ZIP extracted. Contents:", fs.readdirSync(tempExtractPath));
+      const extractedFolders = fs.readdirSync(tempExtractPath)
+        .filter(f => fs.statSync(path.join(tempExtractPath, f)).isDirectory());
 
-      const [extractedFolder] = fs.readdirSync(tempExtractPath).filter(f => fs.statSync(path.join(tempExtractPath, f)).isDirectory());
-      if (!extractedFolder) throw new Error("Extraction failed: no folder found in ZIP.");
+      if (!extractedFolders.length) throw new Error('No folder found in ZIP.');
 
-      const extractedPath = path.join(tempExtractPath, extractedFolder);
+      const extractedPath = path.join(tempExtractPath, extractedFolders[0]);
 
       const copyRecursive = (src, dest) => {
         const entries = fs.readdirSync(src, { withFileTypes: true });
@@ -110,39 +86,18 @@ const updateCommand = async (m, sock) => {
 
       copyRecursive(extractedPath, process.cwd());
 
-      fs.rmSync(zipPath);
+      fs.unlinkSync(zipPath);
       fs.rmSync(tempExtractPath, { recursive: true, force: true });
 
-      const message = `
-🌐 *INCONNU XD V2 Update Result*
-╭───────────────⭓
-│ *BOT:* INCONNU XD V2
-│ *DEV:* INCONNU BOY
-│ *Update Status:* ✅ Success
-╰───────────────⭓
-
-✅ *Update completed successfully! Use* \`${prefix}restart\` *to reload the bot.*
-`.trim();
-
+      // Envoi d'un message simple sans bouton
       await sock.sendMessage(m.from, {
-        text: message,
-        contextInfo: {
-          forwardingScore: 999,
-          isForwarded: true,
-          externalAdReply: {
-            title: "INCONNU XD V2",
-            body: "Update Completed",
-            thumbnailUrl: "https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg",
-            mediaType: 1,
-            renderLargerThumbnail: true,
-            sourceUrl: "https://github.com/INCONNU-BOY/INCONNU-XD-V2"
-          }
-        }
+        text: `✅ *Update complete!*\n\nPlease restart the bot manually.`,
       }, { quoted: m });
+
     } catch (err) {
       console.error('Update error:', err);
       await sock.sendMessage(m.from, {
-        text: `❌ *An error occurred while updating.*\n\nError: ${err.message}`,
+        text: `❌ *Update failed.*\n\n${err.message}`
       }, { quoted: m });
     }
   }
