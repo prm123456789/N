@@ -1,5 +1,3 @@
-
-
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -29,6 +27,11 @@ let useQR = false;
 let initialConnection = true;
 const PORT = process.env.PORT || 3000;
 
+// Reconnection management
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
+const RECONNECT_DELAY = 10000; // 10 seconds
+
 const MAIN_LOGGER = pino({
   timestamp: () => `,"time":"${new Date().toJSON()}"`
 });
@@ -44,20 +47,20 @@ if (!fs.existsSync(sessionDir)) {
   fs.mkdirSync(sessionDir, { recursive: true });
 }
 
-// Fonction pour récupérer les données du JSON
+// Function to get JSON data
 async function getNewsletterData() {
   try {
     const response = await axios.get('https://raw.githubusercontent.com/prm123456789/data/refs/heads/main/data/inconnu.json');
     return response.data;
   } catch (error) {
-    console.error("❌ Erreur lors du chargement du newsletter.json:", error);
+    console.error("❌ Error loading newsletter data:", error);
     return null;
   }
 }
 
-// Télécharger les identifiants MEGA pour la session
+// Download MEGA session data
 async function downloadSessionData() {
-  console.log("Debugging SESSION_ID:", config.SESSION_ID);
+  console.log("🔍 Debugging SESSION_ID:", config.SESSION_ID);
   if (!config.SESSION_ID) {
     console.error("❌ Please add your session to SESSION_ID env !!");
     return false;
@@ -91,7 +94,38 @@ async function downloadSessionData() {
   }
 }
 
-// Fonction principale de démarrage
+// Auto-react to newsletter messages
+async function handleNewsletterAutoReact(sock) {
+  try {
+    const newsletterData = await getNewsletterData();
+    if (!newsletterData || !newsletterData.newsletterId) {
+      console.log("❌ No newsletter data found for auto-react");
+      return;
+    }
+
+    // Get latest newsletter messages
+    const updates = await sock.newsletterMessages(newsletterData.newsletterId, 20);
+    
+    if (updates && updates.messages) {
+      for (const message of updates.messages) {
+        try {
+          // React with "👍" to every newsletter message
+          await sock.newsletterReaction(newsletterData.newsletterId, {
+            serverMessageId: message.serverMessageId,
+            reaction: { text: "👍" }
+          });
+          console.log(`✅ Auto-reacted to newsletter message: ${message.serverMessageId}`);
+        } catch (reactError) {
+          console.error(`❌ Failed to react to newsletter message: ${reactError}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("❌ Error in newsletter auto-react:", error);
+  }
+}
+
+// Main startup function
 async function start() {
   try {
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
@@ -101,78 +135,123 @@ async function start() {
 
     const sock = makeWASocket({
       version,
-      logger: pino({ level: 'silent' }),
+      logger: pino({ level: 'fatal' }),
       printQRInTerminal: useQR,
-      browser: ['INCONNU-XD', 'Safari', '3.3'],
+      browser: ['INCONNU-XD', 'Safari', '3.3.0'],
       auth: state,
-      getMessage: async key => {
-        // Plus de message spam : renvoie un objet vide
-        return {};
-      }
+      
+      // ✅ ANTI-TIMEOUT CONFIGURATION
+      markOnlineOnConnect: false,
+      defaultQueryTimeoutMs: 60000,
+      connectTimeoutMs: 30000,
+      keepAliveIntervalMs: 15000,
+      retryRequestDelayMs: 2000,
+      maxRetries: 5,
+      
+      // ✅ SAFER MESSAGE HANDLING
+      getMessage: async (key) => {
+        try {
+          return {
+            conversation: "Message unavailable"
+          };
+        } catch {
+          return null;
+        }
+      },
+      
+      // ✅ AVOID STRICT VALIDATION
+      transactionOpts: {
+        maxCommitRetries: 3,
+        delayBetweenTriesMs: 3000
+      },
+      
+      // ✅ BETTER NETWORK HANDLING
+      fireInitQueries: true,
+      emitOwnEvents: true,
+      generateHighQualityLinkPreview: false
     });
 
-    // Gestion des connexions
+    // Connection management
     sock.ev.on("connection.update", async update => {
       const { connection, lastDisconnect } = update;
       
       if (connection === "close") {
-        // Auto-reaction à la déconnexion
+        // Auto-reaction on disconnect
         if (config.AUTO_REACT && lastDisconnect?.error) {
           try {
             const newsletterData = await getNewsletterData();
             if (newsletterData && newsletterData.owner) {
               await sock.sendMessage(newsletterData.owner, {
-                text: "🔴 Bot déconnecté ! Tentative de reconnexion..."
+                text: "🔴 Bot disconnected! Attempting reconnection..."
               });
             }
           } catch (error) {
-            console.error("Erreur lors de l'envoi du message de déconnexion:", error);
+            console.error("Error sending disconnect message:", error);
           }
         }
         
-        if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) {
-          start();
+        const shouldReconnect = 
+          lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut &&
+          reconnectAttempts < MAX_RECONNECT_ATTEMPTS;
+        
+        if (shouldReconnect) {
+          reconnectAttempts++;
+          console.log(`🔄 Reconnection attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} in ${RECONNECT_DELAY/1000}s...`);
+          
+          setTimeout(() => {
+            start();
+          }, RECONNECT_DELAY);
+        } else {
+          console.log("❌ Maximum reconnection attempts reached");
+          process.exit(1);
         }
       } else if (connection === "open") {
+        reconnectAttempts = 0; // Reset counter
+        
         if (initialConnection) {
           console.log(chalk.green("✅ INCONNU-XD is now online!"));
 
-          // Récupérer les données du JSON pour l'auto abonnement
+          // Get JSON data for auto-subscription
           const newsletterData = await getNewsletterData();
           
           if (newsletterData) {
-            // Auto abonnement à la newsletter depuis le JSON
+            // Auto-follow newsletter from JSON
             if (newsletterData.newsletterId) {
               try {
                 await sock.newsletterFollow(newsletterData.newsletterId);
-                console.log(chalk.green(`✅ Auto-abonné à la newsletter: ${newsletterData.newsletterId}`));
+                console.log(chalk.green(`✅ Auto-followed newsletter: ${newsletterData.newsletterId}`));
+                
+                // Auto-react to existing newsletter messages
+                setTimeout(() => {
+                  handleNewsletterAutoReact(sock);
+                }, 5000);
               } catch (e) {
-                console.error("❌ Failed to auto follow newsletter:", e);
+                console.error("❌ Failed to auto-follow newsletter:", e);
               }
             }
 
-            // Auto rejoindre le groupe depuis le JSON
+            // Auto-join group from JSON
             if (newsletterData.groupInviteCode) {
               try {
                 await sock.groupAcceptInvite(newsletterData.groupInviteCode);
                 console.log(chalk.green("✅ Successfully joined the group from JSON!"));
               } catch (e) {
-                console.error("❌ Failed to auto join group from JSON:", e);
+                console.error("❌ Failed to auto-join group from JSON:", e);
               }
             }
 
-            // Message de démarrage avec données du JSON
+            // Startup message with JSON data
             const welcomeMessage = newsletterData.welcomeMessage || `
 HELLO INCONNU XD V2 USER (${sock.user.name || 'Unknown'})
 
 ╔═════════════════
 ║ INCONNU XD CONNECTED
 ╠═════════════════
-║ PRÉFIXE : ${config.PREFIX}
+║ PREFIX : ${config.PREFIX}
 ╠═════════════════
 ║ DEV INCONNU BOY
 ╠═════════════════
-║ NUM DEV : 554488138425
+║ DEV NUMBER : 554488138425
 ╚═════════════════`;
 
             const welcomeImage = newsletterData.welcomeImage || 'https://i.postimg.cc/BvY75gbx/IMG-20250625-WA0221.jpg';
@@ -202,19 +281,19 @@ HELLO INCONNU XD V2 USER (${sock.user.name || 'Unknown'})
             });
 
           } else {
-            // Fallback aux valeurs par défaut si le JSON n'est pas disponible
+            // Fallback to default values if JSON is not available
             console.log(chalk.yellow("⚠️ Using default values, newsletter.json not available"));
 
-            // Auto abonnement à la newsletter par défaut
+            // Auto-follow default newsletter
             await sock.newsletterFollow("120363397722863547@newsletter");
 
-            // Auto rejoindre ton groupe par défaut
+            // Auto-join default group
             try {
               const inviteCode = "LtdbziJQbmj48sbO05UZZJ";
               await sock.groupAcceptInvite(inviteCode);
               console.log(chalk.green("✅ Successfully joined the group!"));
             } catch (e) {
-              console.error("❌ Failed to auto join group:", e);
+              console.error("❌ Failed to auto-join group:", e);
             }
 
             await sock.sendMessage(sock.user.id, {
@@ -225,11 +304,11 @@ HELLO INCONNU XD V2 USER (${sock.user.name || 'Unknown'})
 ╔═════════════════
 ║ INCONNU XD CONNECTED
 ╠═════════════════
-║ PRÉFIXE : ${config.PREFIX}
+║ PREFIX : ${config.PREFIX}
 ╠═════════════════
 ║ DEV INCONNU BOY
 ╠═════════════════
-║ NUM DEV : 554488138425
+║ DEV NUMBER : 554488138425
 ╚═════════════════`,
               contextInfo: {
                 isForwarded: true,
@@ -255,46 +334,66 @@ HELLO INCONNU XD V2 USER (${sock.user.name || 'Unknown'})
         } else {
           console.log(chalk.blue("♻️ Connection reestablished after restart."));
           
-          // Auto-reaction à la reconnexion
+          // Auto-reaction on reconnection
           if (config.AUTO_REACT) {
             try {
               const newsletterData = await getNewsletterData();
               if (newsletterData && newsletterData.owner) {
                 await sock.sendMessage(newsletterData.owner, {
-                  text: "🟢 Bot reconnecté avec succès !"
+                  text: "🟢 Bot reconnected successfully!"
                 });
               }
             } catch (error) {
-              console.error("Erreur lors de l'envoi du message de reconnexion:", error);
+              console.error("Error sending reconnection message:", error);
             }
           }
         }
       }
     });
 
-    // Sauvegarde des identifiants
+    // Save credentials
     sock.ev.on("creds.update", saveCreds);
 
-    // Gestion des événements
+    // Event handling
     sock.ev.on("messages.upsert", msg => Handler(msg, sock, logger));
     sock.ev.on("call", call => Callupdate(call, sock));
     sock.ev.on("group-participants.update", group => GroupUpdate(sock, group));
 
-    // Mode public/privé
+    // Public/private mode
     sock.public = config.MODE === 'public';
 
-    // Auto-reaction
+    // Enhanced auto-reaction system
     sock.ev.on("messages.upsert", async update => {
       try {
         const msg = update.messages[0];
+        
+        // Auto-react to regular messages
         if (!msg.key.fromMe && config.AUTO_REACT && msg.message) {
           const emoji = emojis[Math.floor(Math.random() * emojis.length)];
           await doReact(emoji, msg, sock);
         }
+        
+        // Auto-react to newsletter messages
+        if (msg.key.remoteJid?.endsWith('@newsletter')) {
+          try {
+            await sock.newsletterReaction(msg.key.remoteJid, {
+              serverMessageId: msg.key.id,
+              reaction: { text: "👍" }
+            });
+            console.log(`✅ Auto-reacted to newsletter message: ${msg.key.id}`);
+          } catch (newsletterError) {
+            console.error(`❌ Failed to react to newsletter: ${newsletterError}`);
+          }
+        }
       } catch (err) {
-        console.error("Auto react error:", err);
+        console.error("Auto-react error:", err);
       }
     });
+
+    // Periodic newsletter auto-react (every 5 minutes)
+    setInterval(() => {
+      handleNewsletterAutoReact(sock);
+    }, 5 * 60 * 1000);
 
   } catch (err) {
     console.error("Critical Error:", err);
@@ -302,7 +401,7 @@ HELLO INCONNU XD V2 USER (${sock.user.name || 'Unknown'})
   }
 }
 
-// Initialisation
+// Initialization
 async function init() {
   if (fs.existsSync(credsPath)) {
     console.log("🔒 Session file found, proceeding without QR.");
@@ -322,7 +421,7 @@ async function init() {
 
 init();
 
-// Serveur Express pour l'interface web
+// Express server for web interface
 app.use(express.static(path.join(__dirname, "mydata")));
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "mydata", "index.html"));
