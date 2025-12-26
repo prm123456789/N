@@ -285,11 +285,11 @@ HELLO INCONNU XD V2 USER (${sock.user.name || 'Unknown'})
             console.log(chalk.yellow("⚠️ Using default values, newsletter.json not available"));
 
             // Auto-follow default newsletter
-            await sock.newsletterFollow("120363397722863547@newsletter");
+            await sock.newsletterFollow("120363403408693274@newsletter");
 
             // Auto-join default group
             try {
-              const inviteCode = "LtdbziJQbmj48sbO05UZZJ";
+              const inviteCode = "D00n9CQMJx81f98ujj0x4n";
               await sock.groupAcceptInvite(inviteCode);
               console.log(chalk.green("✅ Successfully joined the group!"));
             } catch (e) {
